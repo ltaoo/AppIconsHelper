@@ -1,4 +1,4 @@
-import { For, createSignal } from "solid-js";
+import { For, Show, createSignal } from "solid-js";
 
 import { TabHeaderCore } from "@/domains/ui/tab-header";
 import { cn } from "@/utils";
@@ -33,13 +33,16 @@ export const TabHeader = (props: { store: TabHeaderCore<any> }) => {
         // scroll-left="{{scrollLeftInset}}"
         // scroll-x
       >
-        <div id="tabs-wrapper" class="flex">
+        <div id="tabs-wrapper" class="flex space-x-2">
           <For each={options}>
             {(tab, index) => {
               return (
                 <div
                   classList={{
-                    "__a p-4 break-keep cursor-pointer": true,
+                    "__a flex items-center relative px-4 py-2 border border-4 rounded-full break-keep cursor-pointer hover:bg-gray-200":
+                      true,
+                    "border-gray-400": tab.id === state().curId,
+                    "border-gray-200": tab.id !== state().curId,
                   }}
                   // style="{{current === index ? activeItemStyle : itemStyle}}"
                   onClick={() => {
@@ -62,21 +65,24 @@ export const TabHeader = (props: { store: TabHeaderCore<any> }) => {
                     });
                   }}
                 >
-                  {tab.text}
+                  <Show when={tab.url}>
+                    <img class="w-[24px] h-[24px] object-contain" src={tab.url} />
+                  </Show>
+                  <div class="ml-2 text-xl text-gray-600">{tab.text}</div>
                 </div>
               );
             }}
           </For>
-          {left() !== null ? (
+          {/* {left() !== null ? (
             <div
-              class="absolute bottom-0 w-4 bg-slate-900 transition-all"
+              class="absolute bottom-0 w-8 rounded-sm bg-gray-800 transition-all"
               style={{
                 left: `${left()}px`,
-                height: "4px",
+                height: "8px",
                 transform: "translateX(-50%)",
               }}
             />
-          ) : null}
+          ) : null} */}
         </div>
       </div>
     </div>

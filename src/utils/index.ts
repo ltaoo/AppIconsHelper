@@ -212,3 +212,9 @@ export function objectToHTML(obj: JSONObject) {
   html += `</${obj.tag}>`;
   return html;
 }
+
+export function extraFilenameWithoutSuffix(name: string) {
+  const names = name.split(".");
+  names.pop();
+  return names.join(".");
+}

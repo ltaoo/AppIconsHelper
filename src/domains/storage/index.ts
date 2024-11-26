@@ -60,7 +60,7 @@ export class StorageCore<T extends Record<string, unknown>> extends BaseDomain<T
     }
     return v as T[K];
   }
-  set = debounce(100, <K extends keyof T>(key: K, values: T[K]) => {
+  setDirectly<K extends keyof T>(key: K, values: T[K]) {
     // console.log("cache set", key, values);
     const nextValues = {
       ...this.values,
@@ -69,7 +69,8 @@ export class StorageCore<T extends Record<string, unknown>> extends BaseDomain<T
     this.values = nextValues;
     this.client.setItem(this.key, JSON.stringify(this.values));
     this.emit(Events.StateChange, { ...this.state });
-  }) as (key: keyof T, value: unknown) => void;
+  }
+  set = debounce(100, this.setDirectly.bind(this)) as (key: keyof T, value: unknown) => void;
   merge = <K extends keyof T>(
     key: K,
     values: Partial<T[K]>,

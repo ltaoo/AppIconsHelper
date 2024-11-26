@@ -30,6 +30,7 @@ export function Canvas(props: CanvasProps) {
     grid: CanvasLayer;
     path: CanvasLayer;
     graph: CanvasLayer;
+    background: CanvasLayer;
   } = {
     // 绘制了选框
     range: CanvasLayer({
@@ -53,6 +54,12 @@ export function Canvas(props: CanvasProps) {
     // 绘制了填充、描边
     graph: CanvasLayer({
       zIndex: 9,
+    }),
+    background: CanvasLayer({
+      zIndex: 1,
+      onMounted(layer) {
+        layer.drawTransparentBackground();
+      },
     }),
   };
   let _cur_layer = _layers.graph;
@@ -111,10 +118,12 @@ export function Canvas(props: CanvasProps) {
   enum Events {
     /** 重新绘制 canvas 内容 */
     Refresh,
+    Mounted,
     Change,
   }
   type TheTypesOfEvents = {
     [Events.Refresh]: void;
+    [Events.Mounted]: void;
     [Events.Change]: typeof _state;
   };
   // 事件
@@ -166,6 +175,7 @@ export function Canvas(props: CanvasProps) {
     },
     setMounted() {
       _mounted = true;
+      bus.emit(Events.Mounted);
     },
     setDPR(v: number) {
       _dpr = v;
@@ -393,6 +403,9 @@ export function Canvas(props: CanvasProps) {
     },
     onRefresh(handler: Handler<TheTypesOfEvents[Events.Refresh]>) {
       return bus.on(Events.Refresh, handler);
+    },
+    onMounted(handler: Handler<TheTypesOfEvents[Events.Mounted]>) {
+      return bus.on(Events.Mounted, handler);
     },
     onChange(handler: Handler<TheTypesOfEvents[Events.Change]>) {
       return bus.on(Events.Change, handler);

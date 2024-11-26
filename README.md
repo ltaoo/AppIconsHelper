@@ -1,11 +1,29 @@
-# IcoHelper
+# AppIconsHelper
 
+Generate app icons for different platforms.
 
-需要修改 `node_modules` 中，`png2icons/lib/UPNG.js`
+## Screenshots
+
+<div align="center">
+	<img src="assets/homepage.png" alt="home page"/>
+</div>
+
+## Features
+
+- Support generate ico and icns files online
+- Directly generate icon files needed for `Flutter` and `Tauri`
+
+## Development
+
+modify the file `png2icons/lib/UPNG.js` in `node_modules`
 
 ```js
 ;(function(){
 	var UPNG = {};
-	var UZIP; // <-- 新增这一行
+	var UZIP; // <-- adding this line
 ```
 
+## Thanks to
+
+- https://github.com/idesis-gmbh/png2icons
+- https://github.com/feross/buffer

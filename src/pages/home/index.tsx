@@ -1,31 +1,47 @@
 /**
  * @file 首页
  */
-import { createSignal, For, onMount, Show } from "solid-js";
-import { Copy } from "lucide-solid";
+import { createSignal, For, Show } from "solid-js";
 import { saveAs } from "file-saver";
 import i18next from "i18next";
 import JSZip from "jszip";
 import { createICNS, createICO, clearCache } from "png2icons";
+import { optimize } from "svgo";
 
 import { ViewComponent, ViewComponentProps } from "@/store/types";
 import { connect, connectLayer } from "@/biz/canvas/connect.web";
 import { Canvas } from "@/biz/canvas";
 import { base, Handler } from "@/domains/base";
 import { DragZoneCore } from "@/domains/ui/drag-zone";
+import { Result } from "@/domains/result";
 import { DropArea } from "@/components/ui/drop-area";
-import { blobToArrayBuffer, loadImage } from "@/utils/browser";
+import { blobToArrayBuffer, loadImage, readFileAsArrayBuffer, readFileAsURL } from "@/utils/browser";
 import { TabHeader } from "@/components/ui/tab-header";
 import { TabHeaderCore } from "@/domains/ui/tab-header";
-import { Button } from "@/components/ui";
+import { GithubIcon } from "@/components/GithubIcon";
+import { extraFilenameWithoutSuffix } from "@/utils";
 
 function HomeIndexPageCore(props: ViewComponentProps) {
-  const { app } = props;
+  const { app, storage } = props;
 
-  let _file: null | { name: string; buffer: ArrayBuffer; url: string } = null;
-  let _icons: ReturnType<typeof $$canvas.buildPreviewIcons> = [];
-  let _code = "";
-  const TAURI_ICONS_SIZE_LIST = [
+  let _file: null | { name: string; name2: string; buffer: ArrayBuffer; url: string } = null;
+  type IconSizePayload = {
+    name: string;
+    suffix: string;
+    width: number;
+    height: number;
+    scale?: number;
+    files?: IconSizePayload[];
+  };
+  const GENERAL_ICONS_SIZE_LIST: IconSizePayload[] = [
+    { name: "32x32", suffix: "png", width: 32, height: 32 },
+    { name: "128x128", suffix: "png", width: 128, height: 128 },
+    { name: "128x128@2x", suffix: "png", width: 128, height: 128, scale: 2 },
+    { name: "favicon", suffix: "ico", width: 512, height: 512 },
+    { name: "icon", suffix: "ico", width: 512, height: 512 },
+    { name: "icon", suffix: "icns", width: 512, height: 512 },
+  ];
+  const TAURI_ICONS_SIZE_LIST: IconSizePayload[] = [
     { name: "32x32", suffix: "png", width: 32, height: 32 },
     { name: "128x128", suffix: "png", width: 128, height: 128 },
     { name: "128x128@2x", suffix: "png", width: 128, height: 128, scale: 2 },
@@ -43,215 +59,107 @@ function HomeIndexPageCore(props: ViewComponentProps) {
     { name: "icon", suffix: "ico", width: 512, height: 512 },
     { name: "icon", suffix: "icns", width: 512, height: 512 },
   ];
-  function preview() {
-    const result = $$canvas.buildPreviewIcons();
-    if (result.length === 0) {
-      app.tip({
-        text: ["无法预览，没有内容"],
-      });
-      return;
+  const FLUTTER_ICONS_SIZE_LIST: IconSizePayload[] = [
+    { name: "app_icon", suffix: "ico", width: 512, height: 512 },
+    { name: "flutter_logo", suffix: "png", width: 64, height: 64 },
+    {
+      name: "2.0x",
+      suffix: "folder",
+      width: 64,
+      height: 64,
+      files: [{ name: "flutter_logo", suffix: "png", width: 128, height: 128 }],
+    },
+    {
+      name: "3.0x",
+      suffix: "folder",
+      width: 64,
+      height: 64,
+      files: [{ name: "flutter_logo", suffix: "png", width: 192, height: 192 }],
+    },
+  ];
+  // https://www.electronforge.io/guides/create-and-add-icons
+  const ELECTRON_ICONS_SIZE_LIST: IconSizePayload[] = [
+    { name: "icon", suffix: "png", width: 512, height: 512 },
+    { name: "icon@2x", suffix: "png", width: 512, height: 512, scale: 2 },
+    { name: "icon@3x", suffix: "png", width: 512, height: 512, scale: 3 },
+    { name: "icon", suffix: "ico", width: 512, height: 512 },
+    { name: "icon", suffix: "icns", width: 512, height: 512 },
+  ];
+  const sizeGroups: Record<string, IconSizePayload[]> = {
+    general: GENERAL_ICONS_SIZE_LIST,
+    tauri: TAURI_ICONS_SIZE_LIST,
+    flutter: FLUTTER_ICONS_SIZE_LIST,
+    electron: ELECTRON_ICONS_SIZE_LIST,
+  };
+  async function loadSVGString(content: string) {
+    const result = optimize(content, {
+      multipass: false,
+      plugins: ["removeDoctype", "removeComments", "removeDimensions"],
+    });
+    const blob = new Blob([result.data], { type: "image/svg+xml;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const r2 = await loadImage(url);
+    if (r2.error) {
+      return Result.Err(r2.error.message);
     }
-    // setIcons(result);
-    _icons = result;
-    bus.emit(Events.Change, { ...state });
-  }
-
-  function draw() {
-    // console.log("[PAGE]index/index - draw", $$canvas.paths.length);
     const $graph_layer = $$canvas.layer;
-    const $pen_layer = $$canvas.layers.path;
+    const $image = r2.data;
+    const scale = Math.min($$canvas.size.width / $image.width, $$canvas.size.height / $image.height);
+    const x = ($$canvas.size.width - $image.width * scale) / 2;
+    const y = ($$canvas.size.height - $image.height * scale) / 2;
     $graph_layer.clear();
-    $pen_layer.clear();
-    $graph_layer.emptyLogs();
-    // $$layer.resumeLog();
-    // if ($$canvas.debug) {
-    //   const m = $$canvas.getMousePoint();
-    //   $$layer.setFillStyle("black");
-    //   $$layer.setFont("10px Arial");
-    //   $$layer.fillText(m.text, m.x, m.y);
-    // }
-    // console.log("[PAGE]before render $$canvas.paths", $$canvas.paths);
-    for (let i = 0; i < $$canvas.paths.length; i += 1) {
-      (() => {
-        const $$prev_path = $$canvas.paths[i - 1];
-        const $$path = $$canvas.paths[i];
-        const state = $$path.state;
-        // console.log("before $$path.state.stroke.enabled", state.stroke.enabled);
-        if (state.stroke.enabled) {
-          // 绘制描边
-          // const curves = $$path.buildOutline({ cap: "butt" });
-          // ctx.save();
-          // ctx.beginPath();
-          // for (let i = 0; i < curves.outline.length; i += 1) {
-          //   const curve = curves.outline[i];
-          //   const [start, c1, c2, end] = curve.points;
-          //   const next = curves.outline[i + 1];
-          //   if (i === 0 && start) {
-          //     ctx.moveTo(start.x, start.y);
-          //   }
-          //   (() => {
-          //     if (curve._linear) {
-          //       const last = curve.points[curve.points.length - 1];
-          //       ctx.lineTo(last.x, last.y);
-          //       return;
-          //     }
-          //     if (end) {
-          //       ctx.bezierCurveTo(c1.x, c1.y, c2.x, c2.y, end.x, end.y);
-          //       return;
-          //     }
-          //     ctx.quadraticCurveTo(c1.x, c1.y, c2.x, c2.y);
-          //   })();
-          // }
-          // ctx.closePath();
-          // ctx.fillStyle = $$path.state.stroke.color;
-          // ctx.fill();
-          // ctx.strokeStyle = state.stroke.color;
-          // ctx.lineWidth = $$canvas.grid.unit * state.stroke.width;
-          // ctx.lineCap = state.stroke.start_cap;
-          // ctx.lineJoin = state.stroke.join;
-          // ctx.stroke();
-          // ctx.restore();
-        }
-        // 绘制路径
-        console.log("[PAGE]home/index render $$canvas.paths");
-        for (let j = 0; j < $$path.paths.length; j += 1) {
-          const $sub_path = $$path.paths[j];
-          const commands = $sub_path.buildCommands();
-          $graph_layer.save();
-          for (let i = 0; i < commands.length; i += 1) {
-            const prev = commands[i - 1];
-            const command = commands[i];
-            const next_command = commands[i + 1];
-            // console.log("[PAGE]command", command.c, command.a);
-            if (command.c === "M") {
-              const [x, y] = command.a;
-              // 这两个的顺序影响很大？？？？？如果开头是弧线，就不能使用 moveTo；其他情况都可以先 beginPath 再 moveTo
-              $graph_layer.beginPath();
-              $graph_layer.moveTo(x, y);
-              $pen_layer.beginPath();
-              $pen_layer.moveTo(x, y);
-            }
-            if (command.c === "A") {
-              // console.log('A', command);
-              const [c1x, c1y, radius, angle1, angle2, counterclockwise] = command.a;
-              $graph_layer.arc(c1x, c1y, radius, angle1, angle2, Boolean(counterclockwise));
-              $pen_layer.arc(c1x, c1y, radius, angle1, angle2, Boolean(counterclockwise));
-              // if (command.end) {
-              //   ctx.moveTo(command.end.x, command.end.y);
-              // }
-            }
-            if (command.c === "C") {
-              const [c1x, c1y, c2x, c2y, ex, ey] = command.a;
-              $graph_layer.bezierCurveTo(c1x, c1y, c2x, c2y, ex, ey);
-              $pen_layer.bezierCurveTo(c1x, c1y, c2x, c2y, ex, ey);
-              // if (command.p) {
-              //   ctx.moveTo(command.p.x, command.p.y);
-              // }
-            }
-            if (command.c === "Q") {
-              const [c1x, c1y, ex, ey] = command.a;
-              $graph_layer.quadraticCurveTo(c1x, c1y, ex, ey);
-              $pen_layer.quadraticCurveTo(c1x, c1y, ex, ey);
-            }
-            if (command.c === "L") {
-              const [x, y] = command.a;
-              $graph_layer.lineTo(x, y);
-              $pen_layer.lineTo(x, y);
-            }
-            if (command.c === "Z") {
-              $graph_layer.closePath();
-              $pen_layer.closePath();
-            }
-          }
-          $pen_layer.setStrokeStyle("lightgrey");
-          $pen_layer.setLineWidth(1);
-          $pen_layer.stroke();
-          // console.log("[PAGE]home/index before fill", state.fill);
-          if (state.fill.enabled && $sub_path.closed) {
-            if ($sub_path.composite === "destination-out") {
-              $graph_layer.setGlobalCompositeOperation($sub_path.composite);
-            }
-            $graph_layer.setFillStyle(state.fill.color);
-            // console.log("check is url gradient", state.fill.color, state.fill.color.match(/url\(([^)]{1,})\)/));
-            if (state.fill.color.match(/url\(([^)]{1,})\)/)) {
-              const [_, id] = state.fill.color.match(/url\(#([^)]{1,})\)/)!;
-              const payload = $$canvas.getGradient(id);
-              if (payload) {
-                const gradient = $graph_layer.getGradient(payload) as CanvasGradient;
-                $graph_layer.setFillStyle(gradient);
-              }
-            }
-            $graph_layer.fill();
-          }
-          // console.log("[PAGE]home/index before stroke", state.stroke);
-          if (state.stroke.enabled) {
-            $graph_layer.setStrokeStyle(state.stroke.color);
-            $graph_layer.setLineWidth($$canvas.grid.unit * state.stroke.width);
-            $graph_layer.setLineCap(state.stroke.start_cap);
-            $graph_layer.setLineJoin(state.stroke.join);
-            $graph_layer.stroke();
-          }
-          $graph_layer.restore();
-          $graph_layer.stopLog();
-        }
-        if ($$path.selected) {
-          const box = $$path.box;
-          $pen_layer.drawRect(box);
-          const edges = $$path.buildEdgesOfBox();
-          for (let i = 0; i < edges.length; i += 1) {
-            const edge = edges[i];
-            $pen_layer.drawRect(edge, { background: "#ffffff" });
-          }
-        }
-      })();
+    $graph_layer.drawImage(r2.data, { x, y }, { width: $image.width * scale, height: $image.height * scale });
+    const r3 = await $graph_layer.getBlob("image/png");
+    if (r3.error) {
+      return Result.Err(r3.error.message);
     }
+    const buffer = await blobToArrayBuffer(r3.data);
+    return Result.Ok({
+      url,
+      buffer,
+    });
   }
-
-  const $dragZone = new DragZoneCore();
-  $dragZone.onChange(async (files) => {
-    const file = files[0];
+  async function handleFile(file: File) {
     const filename = file.name;
-    const r = await app.readFile(file);
+    const r = await readFileAsArrayBuffer(file);
     if (r.error) {
       app.tip({
         text: [r.error.message],
       });
       return;
     }
-    _file = {
-      name: filename,
-      buffer: r.data,
-      url: URL.createObjectURL(file),
-    };
-    bus.emit(Events.Change, { ...state });
+    (async () => {
+      if (!filename.match(/\.(svg|png|jpg|jpeg)$/)) {
+        console.log("[ERROR]validate a validate file");
+        return;
+      }
+      const r = await readFileAsURL(file);
+      if (r.error) {
+        console.log(r.error.message);
+        return;
+      }
+      storage.set("file", {
+        name: file.name,
+        content: r.data,
+      });
+    })();
     if (filename.match(/\.svg$/)) {
       const decoder = new TextDecoder("utf-8");
       const content = decoder.decode(r.data);
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(content, "image/svg+xml");
-      const svg = doc.getElementsByTagName("svg")[0];
-      const result = $$canvas.buildBezierPathsFromPathString(new XMLSerializer().serializeToString(svg));
-      if (result === null) {
+      const r2 = await loadSVGString(content);
+      if (r2.error) {
         app.tip({
-          text: ["不是合法的 SVG 内容"],
+          text: [r2.error.message],
         });
         return;
       }
-      const { dimensions, gradients, paths } = result;
-      console.log("[PAGE]home/index svg result from file", filename, dimensions, result);
-      $$canvas.saveGradients(gradients);
-      $$canvas.appendObject(paths, { transform: true, dimensions });
-      draw();
-      const $graph_layer = $$canvas.layer;
-      const r3 = await $graph_layer.getBlob("image/png");
-      if (r3.error) {
-        app.tip({
-          text: [r3.error.message],
-        });
-        return;
-      }
-      _file.buffer = await blobToArrayBuffer(r3.data);
-      _file.url = URL.createObjectURL(r3.data);
+      _file = {
+        name: filename,
+        name2: extraFilenameWithoutSuffix(file.name),
+        buffer: r2.data.buffer,
+        url: r2.data.url,
+      };
+      bus.emit(Events.Change, { ...state });
       return;
     }
     if (filename.match(/\.(png|jpg|jpeg)$/)) {
@@ -265,6 +173,13 @@ function HomeIndexPageCore(props: ViewComponentProps) {
         });
         return;
       }
+      _file = {
+        name: filename,
+        name2: extraFilenameWithoutSuffix(file.name),
+        buffer: r.data,
+        url,
+      };
+      bus.emit(Events.Change, { ...state });
       const $graph_layer = $$canvas.layer;
       const $image = r2.data;
       const scale = Math.min($$canvas.size.width / $image.width, $$canvas.size.height / $image.height);
@@ -272,7 +187,115 @@ function HomeIndexPageCore(props: ViewComponentProps) {
       const y = ($$canvas.size.height - $image.height * scale) / 2;
       $graph_layer.clear();
       $graph_layer.drawImage(r2.data, { x, y }, { width: $image.width * scale, height: $image.height * scale });
+      return;
     }
+    app.tip({
+      text: [i18next.t("not_supported_format"), i18next.t("the_format_now_supported")],
+    });
+  }
+  const IMAGE_SCALE = 10;
+  async function generatePNG(size: IconSizePayload, canvas: HTMLCanvasElement): Promise<Result<Blob>> {
+    const { name, suffix, width, height, scale = 1 } = size;
+    const tempCanvas = document.createElement("canvas");
+    const scaledWidth = width * IMAGE_SCALE * scale;
+    const scaledHeight = height * IMAGE_SCALE * scale;
+    tempCanvas.width = scaledWidth;
+    tempCanvas.height = scaledHeight;
+    const tempCtx = tempCanvas.getContext("2d")!;
+    tempCtx.imageSmoothingEnabled = true;
+    tempCtx.drawImage(
+      canvas,
+      $$canvas.grid.x,
+      $$canvas.grid.y,
+      $$canvas.grid.width,
+      $$canvas.grid.height,
+      0,
+      0,
+      scaledWidth,
+      scaledHeight
+    );
+    const exportCanvas = document.createElement("canvas");
+    exportCanvas.width = width;
+    exportCanvas.height = height;
+    const exportCtx = exportCanvas.getContext("2d")!;
+    exportCtx.drawImage(tempCanvas, 0, 0, scaledWidth, scaledHeight, 0, 0, width, height);
+    const data = exportCanvas.toDataURL("image/png");
+    try {
+      const response = await fetch(data);
+      const blob = await response.blob();
+      return Result.Ok(blob);
+    } catch (err) {
+      const e = err as Error;
+      return Result.Err(e.message);
+    }
+  }
+  function isValidPNG(buffer: ArrayBuffer) {
+    const uint8Array = new Uint8Array(buffer);
+    const header = uint8Array.slice(0, 8);
+    if (
+      !(
+        header[0] === 0x89 &&
+        header[1] === 0x50 &&
+        header[2] === 0x4e &&
+        header[3] === 0x47 &&
+        header[4] === 0x0d &&
+        header[5] === 0x0a &&
+        header[6] === 0x1a &&
+        header[7] === 0x0a
+      )
+    ) {
+      return false;
+    }
+    return true;
+  }
+  function generateICO(file: NonNullable<typeof _file>): Result<Blob> {
+    const valid = isValidPNG(file.buffer);
+    if (!valid) {
+      return Result.Err(i18next.t("not_a_valid_png_file"));
+    }
+    // @ts-ignore
+    const r = createICO(file.buffer);
+    clearCache();
+    if (r === null) {
+      return Result.Err(i18next.t("create_ico_failed"));
+    }
+    return Result.Ok(new Blob([r], { type: "application/octet-stream" }));
+  }
+  function generateICNS(file: NonNullable<typeof _file>): Result<Blob> {
+    const valid = isValidPNG(file.buffer);
+    if (!valid) {
+      return Result.Err(i18next.t("not_a_valid_png_file"));
+    }
+    // @ts-ignore
+    const r = createICNS(file.buffer);
+    clearCache();
+    if (r === null) {
+      return Result.Err(i18next.t("create_ico_failed"));
+    }
+    return Result.Ok(new Blob([r], { type: "application/octet-stream" }));
+  }
+  function countFiles(sizes: IconSizePayload[]) {
+    let count = 0;
+    for (let i = 0; i < sizes.length; i += 1) {
+      (() => {
+        const size = sizes[i];
+        if (size.suffix === "folder" && size.files) {
+          count += countFiles(size.files);
+          return;
+        }
+        count += 1;
+      })();
+    }
+    return count;
+  }
+  const $dragZone = new DragZoneCore();
+  $dragZone.onChange(async (files) => {
+    if (storage.values.newuser) {
+      storage.setDirectly("newuser", 0);
+      bus.emit(Events.Change, { ...state });
+    }
+    const file = files[0];
+    handleFile(file);
   });
   const $$canvas = Canvas({
     grid: {
@@ -282,69 +305,53 @@ function HomeIndexPageCore(props: ViewComponentProps) {
     },
   });
   const $tabs = new TabHeaderCore({
+    defaultTab: storage.get("tab") || "general",
     options: [
       {
-        id: 1,
+        id: "general",
         text: i18next.t("general"),
       },
       {
-        id: 2,
+        id: "tauri",
         text: "Tauri",
+        url: "/tauri.png",
       },
       {
-        id: 3,
+        id: "flutter",
         text: "Flutter",
+        url: "/flutter.png",
       },
       {
-        id: 4,
-        text: "Electron",
+        id: "electron",
+        text: "Electronjs",
+        url: "/electronjs.png",
       },
     ],
-    onMounted() {
-      $tabs.selectById(1);
+    onChange(value) {
+      storage.set("tab", value.id);
+      bus.emit(Events.Change, { ...state });
     },
   });
-  $$canvas.$selection.onChange((state) => {
-    const $layer = $$canvas.layers.range;
-    // console.log("[PAGE]before drawRect", state);
-    $layer.clear();
-    $layer.drawRect(state);
-  });
-  $$canvas.onRefresh(() => {
-    draw();
-  });
-  app.onKeyup(({ code }) => {
-    if (code === "Backspace") {
-      $$canvas.handleKeyupBackspace();
-    }
-    if (code === "KeyC" && app.keyboard["ControlLeft"]) {
-      $$canvas.tagCurObjectAsCopy();
-    }
-    if (code === "ControlLeft" && app.keyboard["KeyC"]) {
-      $$canvas.tagCurObjectAsCopy();
-    }
-    if (code === "KeyV" && app.keyboard["ControlLeft"]) {
-    }
-    if (code === "ControlLeft" && app.keyboard["KeyV"]) {
-    }
-  });
   const state = {
-    get sizeGroups() {
-      return [
-        {
-          label: "通用",
-          sizes: TAURI_ICONS_SIZE_LIST,
-        },
-      ];
+    get files() {
+      const index = $tabs.state.curId;
+      if (index === null) {
+        return sizeGroups["general"];
+      }
+      return sizeGroups[index];
     },
     get file() {
       return _file;
     },
-    get icons() {
-      return _icons;
+    get downloadTip() {
+      if (_file === null) {
+        return "";
+      }
+      const count = countFiles(this.files);
+      return i18next.t("download_zip_with_files_count", { name: `${_file.name2}.zip`, count });
     },
-    get code() {
-      return _code;
+    get newuser() {
+      return storage.values.newuser;
     },
   };
 
@@ -356,6 +363,80 @@ function HomeIndexPageCore(props: ViewComponentProps) {
   };
   const bus = base<TheTypesOfEvents>();
 
+  $$canvas.onMounted(async () => {
+    const file = (() => {
+      const existing = storage.get("file");
+      if (existing) {
+        if (existing.name.match(/\.svg$/)) {
+          const data = existing.content.split(",")[1];
+          const buffer = atob(data);
+          const content = new TextDecoder("utf-8").decode(
+            // @ts-ignore
+            new Uint8Array([...buffer].map((char) => char.charCodeAt(0)))
+          );
+          return {
+            name: existing.name,
+            content,
+          };
+        }
+        return {
+          name: existing.name,
+          content: existing.content,
+        };
+      }
+      return {
+        name: "github.svg",
+        content: `<svg width="98" height="96" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M48.854 0C21.839 0 0 22 0 49.217c0 21.756 13.993 40.172 33.405 46.69 2.427.49 3.316-1.059 3.316-2.362 0-1.141-.08-5.052-.08-9.127-13.59 2.934-16.42-5.867-16.42-5.867-2.184-5.704-5.42-7.17-5.42-7.17-4.448-3.015.324-3.015.324-3.015 4.934.326 7.523 5.052 7.523 5.052 4.367 7.496 11.404 5.378 14.235 4.074.404-3.178 1.699-5.378 3.074-6.6-10.839-1.141-22.243-5.378-22.243-24.283 0-5.378 1.94-9.778 5.014-13.2-.485-1.222-2.184-6.275.486-13.038 0 0 4.125-1.304 13.426 5.052a46.97 46.97 0 0 1 12.214-1.63c4.125 0 8.33.571 12.213 1.63 9.302-6.356 13.427-5.052 13.427-5.052 2.67 6.763.97 11.816.485 13.038 3.155 3.422 5.015 7.822 5.015 13.2 0 18.905-11.404 23.06-22.324 24.283 1.78 1.548 3.316 4.481 3.316 9.126 0 6.6-.08 11.897-.08 13.526 0 1.304.89 2.853 3.316 2.364 19.412-6.52 33.405-24.935 33.405-46.691C97.707 22 75.788 0 48.854 0z" fill="#24292f"/></svg>`,
+      };
+    })();
+    if (file.name.match(/\.svg$/)) {
+      const r2 = await loadSVGString(file.content);
+      if (r2.error) {
+        app.tip({
+          text: [r2.error.message],
+        });
+        return;
+      }
+      _file = {
+        name: file.name,
+        name2: extraFilenameWithoutSuffix(file.name),
+        buffer: r2.data.buffer,
+        url: r2.data.url,
+      };
+      bus.emit(Events.Change, { ...state });
+      return;
+    }
+    if (file.name.match(/\.(png|jpg|jpeg)$/)) {
+      const r2 = await loadImage(file.content);
+      if (r2.error) {
+        app.tip({
+          text: [r2.error.message],
+        });
+        return;
+      }
+      const $graph_layer = $$canvas.layer;
+      const $image = r2.data;
+      const scale = Math.min($$canvas.size.width / $image.width, $$canvas.size.height / $image.height);
+      const x = ($$canvas.size.width - $image.width * scale) / 2;
+      const y = ($$canvas.size.height - $image.height * scale) / 2;
+      $graph_layer.clear();
+      $graph_layer.drawImage(r2.data, { x, y }, { width: $image.width * scale, height: $image.height * scale });
+      const r3 = await $graph_layer.getBlob("image/png");
+      if (r3.error) {
+        return Result.Err(r3.error.message);
+      }
+      const buffer = await blobToArrayBuffer(r3.data);
+      _file = {
+        name: file.name,
+        name2: extraFilenameWithoutSuffix(file.name),
+        buffer,
+        url: file.content,
+      };
+      bus.emit(Events.Change, { ...state });
+      return;
+    }
+  });
+
   return {
     state,
     ui: {
@@ -363,129 +444,74 @@ function HomeIndexPageCore(props: ViewComponentProps) {
       $dragZone,
       $tabs,
     },
-    preview,
-    async validateCanvasImage() {
-      const $graph_layer = $$canvas.layer;
-      const canvas = $graph_layer.getCanvas() as HTMLCanvasElement;
-      const r1 = await $graph_layer.getBlob("image/png");
-      if (r1.error) {
-        app.tip({
-          text: [r1.error.message],
-        });
-        return;
-      }
-      const blob = r1.data;
-      // const dataURL = canvas.toDataURL("image/png");
-      // const binaryString = atob(base64);
-      // // 创建一个 Uint8Array 来存储二进制数据
-      // const len = binaryString.length;
-      // const bytes = new Uint8Array(len);
-      // for (let i = 0; i < len; i++) {
-      //   bytes[i] = binaryString.charCodeAt(i);
-      // }
-      // const arrayBuffer = bytes.buffer;
-      // const content =
-      // saveAs(content, "icons.zip");
-    },
-    async downloadICO() {
+    loadSVGString,
+    async downloadFiles(sizes: IconSizePayload[], file: NonNullable<typeof _file>) {
       if (_file === null) {
-        return;
-      }
-      const uint8Array = new Uint8Array(_file.buffer);
-      const header = uint8Array.slice(0, 8);
-      if (
-        !(
-          header[0] === 0x89 &&
-          header[1] === 0x50 &&
-          header[2] === 0x4e &&
-          header[3] === 0x47 &&
-          header[4] === 0x0d &&
-          header[5] === 0x0a &&
-          header[6] === 0x1a &&
-          header[7] === 0x0a
-        )
-      ) {
         app.tip({
-          text: ["这不是一个有效的PNG文件"],
+          text: [i18next.t("please_upload_file")],
         });
         return;
       }
-      // @ts-ignore
-      const r = createICO(_file.buffer);
-      clearCache();
-      if (r === null) {
-        app.tip({
-          text: ["生成 ico 失败"],
-        });
-        return;
-      }
-      const zip = new JSZip();
-      const blob = new Blob([r], { type: "application/octet-stream" });
-      zip.file("ttt.ico", blob);
-      // Buffer.from(target, target.offset, target.byteLength)
-      // const t = globalThis.Buffer.from(new Uint8Array(_file.buffer));
-      // console.log(t, t === _file.buffer);
-      // @ts-ignore
-      const r2 = createICNS(_file.buffer);
-      clearCache();
-      // const r2 = createICNS(globalThis.Buffer.from(_file.buffer));
-      if (r2 === null) {
-        app.tip({
-          text: ["生成 icns 失败"],
-        });
-        return;
-      }
-      const blob2 = new Blob([r2], { type: "application/octet-stream" });
-      zip.file("ttt.icns", blob2);
-      const content = await zip.generateAsync({ type: "blob" });
-      saveAs(content, "icons2.zip");
-    },
-    async downloadIcoFiles(sizes: { name: string; suffix: string; width: number; height: number; scale?: number }[]) {
       const $graph_layer = $$canvas.layer;
       const canvas = $graph_layer.getCanvas() as HTMLCanvasElement;
-      const IMAGE_SCALE = 10;
-      const files: { name: string; blob: Blob }[] = [];
-      for (const size of sizes) {
-        const { name, width, height, scale = 1 } = size;
-        const tempCanvas = document.createElement("canvas");
-        const scaledWidth = width * IMAGE_SCALE * scale;
-        const scaledHeight = height * IMAGE_SCALE * scale;
-        tempCanvas.width = scaledWidth;
-        tempCanvas.height = scaledHeight;
-        const tempCtx = tempCanvas.getContext("2d")!;
-        tempCtx.imageSmoothingEnabled = true;
-        tempCtx.drawImage(
-          canvas,
-          $$canvas.grid.x,
-          $$canvas.grid.y,
-          $$canvas.grid.width,
-          $$canvas.grid.height,
-          0,
-          0,
-          scaledWidth,
-          scaledHeight
-        );
-        const exportCanvas = document.createElement("canvas");
-        exportCanvas.width = width;
-        exportCanvas.height = height;
-        const exportCtx = exportCanvas.getContext("2d")!;
-        exportCtx.drawImage(tempCanvas, 0, 0, scaledWidth, scaledHeight, 0, 0, width, height);
-        const pngData = exportCanvas.toDataURL("image/png");
-        const response = await fetch(pngData);
-        const blob = await response.blob();
-        files.push({
-          name: `${name}.png`,
-          blob,
-        });
+      async function generateZIPContent(sizes: IconSizePayload[], parent: JSZip) {
+        for (const size of sizes) {
+          const filename = size.suffix === "folder" ? size.name : `${size.name}.${size.suffix}`;
+          if (size.suffix === "png") {
+            const r = await generatePNG(size, canvas);
+            if (r.error) {
+              app.tip({
+                text: [r.error.message],
+              });
+              return false;
+            }
+            parent.file(filename, r.data);
+          }
+          if (size.suffix === "ico" && _file) {
+            const r = await generateICO(_file);
+            if (r.error) {
+              app.tip({
+                text: [r.error.message],
+              });
+              return false;
+            }
+            parent.file(filename, r.data);
+          }
+          if (size.suffix === "icns" && _file) {
+            const r = await generateICNS(_file);
+            if (r.error) {
+              app.tip({
+                text: [r.error.message],
+              });
+              return false;
+            }
+            parent.file(filename, r.data);
+          }
+          if (size.suffix === "folder" && size.files) {
+            const folder = parent.folder(size.name);
+            if (folder === null) {
+              app.tip({
+                text: [i18next.t("create_zip_failed")],
+              });
+              return false;
+            }
+            const success = await generateZIPContent(size.files, folder);
+            if (success === false) {
+              return false;
+            }
+          }
+        }
+        return true;
       }
       const zip = new JSZip();
-      for (let i = 0; i < files.length; i += 1) {
-        const { name, blob } = files[i];
-        zip.file(name, blob);
+      const success = await generateZIPContent(sizes, zip);
+      if (success === false) {
+        return;
       }
       const content = await zip.generateAsync({ type: "blob" });
-      saveAs(content, "icons.zip");
+      saveAs(content, `${_file.name2}.zip`);
     },
+    async ready() {},
     onChange(handler: Handler<TheTypesOfEvents[Events.Change]>) {
       return bus.on(Events.Change, handler);
     },
@@ -493,8 +519,6 @@ function HomeIndexPageCore(props: ViewComponentProps) {
 }
 
 export const HomeIndexPage: ViewComponent = (props) => {
-  const { app } = props;
-
   const $page = HomeIndexPageCore(props);
   const $$canvas = $page.ui.$$canvas;
 
@@ -508,15 +532,26 @@ export const HomeIndexPage: ViewComponent = (props) => {
   const cursorClassName = () => `cursor__${state().cursor}`;
 
   return (
-    <div>
-      <div class="py-4 bg-gray-200">
-        <div class="w-[1080px] mx-auto">
-          <div class="text-3xl">IcoHelper</div>
+    <div class="bg-[#f8f9fa] min-h-screen">
+      <div class="py-4 shadow-md bg-white">
+        <div class="flex items-center justify-between w-[1080px] mx-auto">
+          <div class="flex items-center">
+            <img class="w-[54px] h-[54px]" src="/128x128.png" />
+            <div class="ml-4 text-gray-800">
+              <div class="text-gray-600 text-3xl">AppIconsHelper</div>
+              <div class="text-gray-400 text-lg">{i18next.t("slogan")}</div>
+            </div>
+          </div>
+          <div>
+            <a href="https://github.com/ltaoo/wx_channels_download" target="_blank">
+              <GithubIcon class="w-[36px] h-[36px] text-gray-600 hover:text-gray-800 cursor-pointer" />
+            </a>
+          </div>
         </div>
       </div>
       <div class="w-[1080px] mx-auto mt-12">
         <div
-          class="__a relative w-[122px] h-[122px] mx-auto"
+          class="__a relative w-[120px] h-[120px] mx-auto"
           style={{ "z-index": 100 }}
           onAnimationEnd={(event) => {
             const rect = event.currentTarget;
@@ -561,54 +596,67 @@ export const HomeIndexPage: ViewComponent = (props) => {
               </For>
             </div>
           </DropArea>
+          <Show when={page().newuser}>
+            <div
+              class="absolute w-[200px] h-[200px] right-[-200px] bottom-[-120px]"
+              style={{ "background-image": `url("/arrow-left.png")` }}
+            >
+              <div class="absolute top-[24px] right-[-32px] text-2xl text-gray-800">{i18next.t("drop_file_here")}</div>
+            </div>
+          </Show>
         </div>
         <div class="mt-2 mb-2 h-[36px] text-xl text-center">{page().file ? page().file?.name : ""}</div>
-        <div class="h-[1px] w-full bg-gray-200"></div>
+        <div class="h-[1px] w-full px-2 bg-gray-200"></div>
         <div class="relative mt-8">
           <TabHeader store={$page.ui.$tabs} />
         </div>
         <Show when={page().file}>
-          <div class="mt-8 bg-white">
-            <For each={page().sizeGroups}>
-              {(group) => {
-                const { label, sizes } = group;
-                return (
-                  <div class="flex flex-wrap">
-                    <For each={sizes}>
-                      {(size) => {
-                        const { name, suffix, width, height } = size;
-                        const filename = `${name}.${suffix}`;
-                        return (
-                          <div
-                            class="flex flex-col items-center p-2 cursor-default hover:bg-gray-200 "
-                            style="width: calc(12% - 10px)"
-                          >
-                            <div class="flex justify-center items-end w-[84px] h-[84px]">
-                              <div
-                                class="max-w-[84px] max-h-[84px]"
-                                style={{ width: `${width}px`, height: `${height}px` }}
-                              >
-                                <img class="block shadow-xl" src={page().file!.url} alt={filename} />
-                              </div>
-                            </div>
-                            <div class="mt-2 w-[84px] text-center break-all">{filename}</div>
-                          </div>
-                        );
-                      }}
-                    </For>
-                  </div>
-                );
-              }}
-            </For>
+          <div class="mt-8">
+            <div class="flex flex-wrap">
+              <For each={page().files}>
+                {(size) => {
+                  const { name, suffix, width, height } = size;
+                  const filename = suffix === "folder" ? name : `${name}.${suffix}`;
+                  return (
+                    <div
+                      class="flex flex-col items-center p-2 rounded-sm cursor-default hover:bg-gray-200"
+                      style="width: calc(12% - 10px)"
+                    >
+                      <div class="flex justify-center items-end w-[84px] h-[84px]">
+                        <div
+                          class="flex justify-center items-end max-w-[84px] max-h-[84px]"
+                          style={{ width: `${width}px`, height: `${height}px` }}
+                        >
+                          <img
+                            class="block"
+                            classList={{
+                              "shadow-lg": suffix !== "folder",
+                            }}
+                            src={suffix === "folder" ? "/folder.png" : page().file!.url}
+                            alt={filename}
+                          />
+                        </div>
+                      </div>
+                      <div class="mt-2 w-[84px] text-center break-all">{filename}</div>
+                    </div>
+                  );
+                }}
+              </For>
+            </div>
           </div>
         </Show>
       </div>
       <Show when={page().file}>
         <div class="fixed bottom-12 left-1/2 -translate-x-1/2">
-          <div class="flex justify-center w-[360px] rounded-md py-4 bg-gray-400">
-            <div class="text-xl text-white">{i18next.t("download")}</div>
+          <div
+            class="flex justify-center w-[360px] rounded-md py-4 bg-gray-800 cursor-pointer hover:bg-gray-900"
+            onClick={() => {
+              $page.downloadFiles(page().files, page().file!);
+            }}
+          >
+            <div class="text-xl text-gray-100">{i18next.t("download")}</div>
           </div>
-          <div class="mt-2 text-center text-gray-600">共计18个文件</div>
+          <div class="mt-2 text-center text-gray-800">{page().downloadTip}</div>
         </div>
       </Show>
     </div>

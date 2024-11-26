@@ -236,6 +236,19 @@ export function connectLayer(
       finish();
     }
   };
+  layer.drawTransparentBackground = (finish: Function) => {
+    const cellSize = 10;
+    const { width, height } = canvas.size;
+    for (let row = 0; row < height; row += cellSize) {
+      for (let col = 0; col < width; col += cellSize) {
+        ctx.fillStyle = (row / cellSize) % 2 === (col / cellSize) % 2 ? "#f0f0f0" : "#ffffff";
+        ctx.fillRect(col, row, cellSize, cellSize);
+      }
+    }
+    if (finish) {
+      finish();
+    }
+  };
   layer.clear = () => {
     const { width, height } = $canvas;
     // 清空画布

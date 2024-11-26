@@ -23,6 +23,7 @@ type TabHeaderState<T extends { key: any; options: { id: any; text: string }[] }
 type TabHeaderProps<T extends { key: any; options: { id: any; text: string }[] }> = {
   key?: T["key"];
   options: T["options"];
+  defaultTab?: string;
   targetLeftWhenSelected?: number;
   onChange?: (value: T["options"][number] & { index: number }) => void;
   onMounted?: () => void;
@@ -33,6 +34,7 @@ export class TabHeaderCore<
 > extends BaseDomain<TheTypesOfEvents<T>> {
   key: T["key"];
   tabs: T["options"] = [];
+  defaultTab?: string;
   count = 0;
   mounted = false;
   /** 已经加载到页面中的 Tab */
@@ -84,10 +86,13 @@ export class TabHeaderCore<
   constructor(props: Partial<{ _name: string }> & TabHeaderProps<T>) {
     super(props);
 
-    const { key = "id", options, targetLeftWhenSelected = 0, onChange, onMounted } = props;
+    const { key = "id", defaultTab, options, targetLeftWhenSelected = 0, onChange, onMounted } = props;
     this.key = key;
     this.targetLeftWhenSelected = targetLeftWhenSelected;
     this.tabs = options;
+    if (defaultTab) {
+      this.defaultTab = defaultTab;
+    }
     if (onChange) {
       this.onChange(onChange);
     }
@@ -207,6 +212,11 @@ export class TabHeaderCore<
     (() => {
       if (this.pendingAction) {
         this.selectById(this.pendingAction.id, this.pendingAction.options);
+        this.pendingAction = null;
+        return;
+      }
+      if (this.defaultTab) {
+        this.selectById(this.defaultTab);
         this.pendingAction = null;
         return;
       }

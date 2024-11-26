@@ -68,6 +68,9 @@ export function CanvasLayer(props: CanvasLayerProps) {
     drawGrid(callback: Function) {
       console.log("请实现 drawGrid 方法");
     },
+    drawTransparentBackground(callback?: Function) {
+      console.log("请实现 drawTransparentBackground 方法");
+    },
     clear() {
       console.log("请实现 clear 方法");
     },

@@ -148,19 +148,6 @@ export function connect<T extends { storage: StorageCore<any> }>(app: Applicatio
     ].includes(`${availWidth}-${availHeight}`);
     app.safeArea = !!matched;
   }
-  app.readFile = (file: File) => {
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        if (e.target === null) {
-          return resolve(Result.Err("read failed"));
-        }
-        const buffer = e.target.result;
-        return resolve(Result.Ok(buffer as ArrayBuffer));
-      };
-      reader.readAsArrayBuffer(file);
-    });
-  };
   // ownerDocument.addEventListener("keydown", (event) => {
   //   const { key } = event;
   //   app.keydown({ key });

@@ -7,6 +7,9 @@ const DEFAULT_CACHE_VALUES = {
     token: "",
     avatar: "",
   },
+  tab: "tauri",
+  newuser: 1,
+  file: null as null | { name: string; content: string },
 };
 const key = "global";
 const e = globalThis.localStorage.getItem(key);

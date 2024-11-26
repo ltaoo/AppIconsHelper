@@ -9,11 +9,11 @@ const configure = {
     pathname: "/",
     children: {
       home_layout: {
-        title: "首页布局",
+        title: "HomeLayout",
         pathname: "/home",
         children: {
           index: {
-            title: "首页",
+            title: "AppIconsHelper - Home",
             pathname: "/home/index",
             options: {
               require: ["login"],

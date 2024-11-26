@@ -224,11 +224,6 @@ export class Application<T extends { storage: StorageCore<any> }> extends BaseDo
     console.warn(tip);
     return Result.Err(tip);
   }
-  readFile(e?: any): Promise<Result<ArrayBuffer>> {
-    const tip = "请在 connect.web 中实现 readFile 方法";
-    console.warn(tip);
-    return Promise.resolve(Result.Err(tip));
-  }
   // push(...args: Parameters<HistoryCore["push"]>) {
   //   return this.$history.push(...args);
   // }

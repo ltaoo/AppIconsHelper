@@ -89,16 +89,32 @@ export const app = new Application({
       resources: {
         en: {
           translation: {
+            slogan: "Generate app icons for different platforms",
             download: "Download",
             general: "General",
             drop_file_here: "Drop File Here",
+            not_supported_format: "Format not supported",
+            the_format_now_supported: "Currently supports .svg, .png, .jpeg, and .jpg",
+            not_a_valid_png_file: "It's not a valid PNG file",
+            create_ico_failed: "Create ICO file failed",
+            create_zip_failed: "Create ZIP file failed",
+            download_zip_with_files_count: "download the {{ name }} containing {{ count }} files",
+            please_upload_file: "Please upload image file",
           },
         },
         zh: {
           translation: {
+            slogan: "为你的应用生成不同平台的图标",
             download: "下载",
             general: "通用",
             drop_file_here: "拖动文件到此处",
+            not_supported_format: "不支持的文件格式",
+            the_format_now_supported: "当前支持 .svg、.png、.jpeg 和 .jpg",
+            not_a_valid_png_file: "不是一个合法的 PNG 文件",
+            create_ico_failed: "生成 ICO 文件失败",
+            create_zip_failed: "创建 ZIP 文件失败",
+            download_zip_with_files_count: "下载 {{ name }}，共包含 {{ count }} 个文件",
+            please_upload_file: "请先上传图片",
           },
         },
       },
