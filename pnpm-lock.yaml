@@ -19,7 +19,7 @@ importers:
         version: 6.0.3
       class-variance-authority:
         specifier: ^0.5.2
-        version: 0.5.3(typescript@4.9.5)
+        version: 0.5.3(typescript@5.7.2)
       clsx:
         specifier: ^1.2.1
         version: 1.2.1
@@ -29,12 +29,9 @@ importers:
       file-saver:
         specifier: ^2.0.5
         version: 2.0.5
-      hls.js:
-        specifier: ^1.4.0
-        version: 1.4.0
       i18next:
         specifier: ^24.0.2
-        version: 24.0.2(typescript@4.9.5)
+        version: 24.0.2(typescript@5.7.2)
       jszip:
         specifier: ^3.10.1
         version: 3.10.1
@@ -112,8 +109,8 @@ importers:
         specifier: ^3.3.1
         version: 3.3.1(postcss@8.4.21)
       typescript:
-        specifier: ^4.9.5
-        version: 4.9.5
+        specifier: ^5.7.2
+        version: 5.7.2
       vite:
         specifier: ^4.5.3
         version: 4.5.3(@types/node@18.15.11)
@@ -1004,9 +1001,6 @@ packages:
     resolution: {integrity: sha512-f2dvO0VU6Oej7RkWJGrehjbzMAjFp5/VKPp5tTpWIV4JHHZK1/BxbFRtf/siA2SWTe09caDmVtYYzWEIbBS4zw==}
     engines: {node: '>= 0.4.0'}
 
-  hls.js@1.4.0:
-    resolution: {integrity: sha512-VEjg7Rx5FlE9TB3MIn0HPgq3J+vR7EoQnjaqMCk/ISEaCOSZlAFh4g867f1QkSxZiq9kHeUZo+iH16X7VS3jKA==}
-
   html-encoding-sniffer@4.0.0:
     resolution: {integrity: sha512-Y22oTqIU4uuPgEemfz7NDJz6OeKf12Lsu+QC+s3BVpda64lTiMYCyGwg5ki4vFxkMwQdeZDl2adZoqUgdFuTgQ==}
     engines: {node: '>=18'}
@@ -1562,9 +1556,9 @@ packages:
     resolution: {integrity: sha512-0fr/mIH1dlO+x7TlcMy+bIDqKPsw/70tVyeHW787goQjhmqaZe10uwLujubK9q9Lg6Fiho1KUKDYz0Z7k7g5/g==}
     engines: {node: '>=4'}
 
-  typescript@4.9.5:
-    resolution: {integrity: sha512-1FXk9E2Hm+QzZQ7z+McJiHL4NW1F2EzMu9Nq9i3zAaGqibafqYwCVU6WyWAuyQRRzOlxou8xZSyXLEN8oKj24g==}
-    engines: {node: '>=4.2.0'}
+  typescript@5.7.2:
+    resolution: {integrity: sha512-i5t66RHxDvVN40HfDd1PsEThGNnlMCMT3jMUuoh9/0TaqWevNontacunWyN02LA9/fIbEWlcHZcgTKb9QoaLfg==}
+    engines: {node: '>=14.17'}
     hasBin: true
 
   ufo@1.1.1:
@@ -2332,9 +2326,9 @@ snapshots:
     optionalDependencies:
       fsevents: 2.3.3
 
-  class-variance-authority@0.5.3(typescript@4.9.5):
+  class-variance-authority@0.5.3(typescript@5.7.2):
     optionalDependencies:
-      typescript: 4.9.5
+      typescript: 5.7.2
 
   clsx@1.2.1: {}
 
@@ -2583,8 +2577,6 @@ snapshots:
     dependencies:
       function-bind: 1.1.1
 
-  hls.js@1.4.0: {}
-
   html-encoding-sniffer@4.0.0:
     dependencies:
       whatwg-encoding: 3.1.1
@@ -2607,11 +2599,11 @@ snapshots:
 
   husky@8.0.3: {}
 
-  i18next@24.0.2(typescript@4.9.5):
+  i18next@24.0.2(typescript@5.7.2):
     dependencies:
       '@babel/runtime': 7.26.0
     optionalDependencies:
-      typescript: 4.9.5
+      typescript: 5.7.2
 
   iconv-lite@0.6.3:
     dependencies:
@@ -3115,7 +3107,7 @@ snapshots:
 
   type-detect@4.0.8: {}
 
-  typescript@4.9.5: {}
+  typescript@5.7.2: {}
 
   ufo@1.1.1: {}
 

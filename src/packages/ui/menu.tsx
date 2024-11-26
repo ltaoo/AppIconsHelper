@@ -249,9 +249,10 @@ const SubTrigger = (
 ) => {
   const { store: item } = props;
 
-  let $item: HTMLDivElement | undefined = undefined;
+  let $item: HTMLDivElement;
 
   onMount(() => {
+    // @ts-ignore
     const $$item = $item;
     // console.log("[COMPONENT]MenuSubTrigger - mount", $item, $$item, item.menu);
     if (!$$item) {
@@ -280,6 +281,7 @@ const SubTrigger = (
 
   return (
     <Anchor store={item.menu!}>
+      {/* @ts-ignore */}
       <ItemImpl ref={$item} class={props.class} store={item}>
         {props.children}
       </ItemImpl>

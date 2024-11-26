@@ -106,11 +106,14 @@ const Value = (props: { store: SelectCore<any>; placeholder?: string } & JSX.HTM
   // store.onValueChange((selectedItem) => {});
 
   const valueCore = new SelectValueCore({
+    // @ts-ignore
     $node: () => $value,
     getRect() {
+      // @ts-ignore
       return $value.getBoundingClientRect();
     },
     getStyles() {
+      // @ts-ignore
       return window.getComputedStyle($value);
     },
   });

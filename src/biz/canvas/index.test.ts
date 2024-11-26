@@ -17,7 +17,7 @@ import { Canvas } from "./index";
 describe("SVG path convert to bezier path", () => {
   it("simple curve1", () => {
     const content = "M120.41 95.9L102.59 60.1C97.4 62.68 92.04 65.87 86.68 69.63C56.62 90.7 27.67 129.47 27.67 171.84Z";
-    const bezier = Canvas({ paths: [] });
+    const bezier = Canvas({ grid: { width: 0, height: 0, unit: 0 } });
     bezier.buildBezierPathsFromPathString(content);
     const paths = bezier.paths;
     // expect(paths.length).toBe(1);

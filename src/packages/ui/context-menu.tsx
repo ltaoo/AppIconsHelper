@@ -26,9 +26,10 @@ const Root = (
  */
 const Trigger = (props: { store: ContextMenuCore } & JSX.HTMLAttributes<HTMLElement>) => {
   const { store: contextMenu } = props;
-  let $span: HTMLSpanElement | undefined = undefined;
+  let $span: HTMLSpanElement;
 
   onMount(() => {
+    // @ts-ignore
     const _$span = $span;
     if (!_$span) {
       return;
@@ -53,11 +54,13 @@ const Trigger = (props: { store: ContextMenuCore } & JSX.HTMLAttributes<HTMLElem
 
   return (
     <span
+      // @ts-ignore
       ref={$span}
       class={props.class}
       style={{ "-webkit-touch-callout": "none" }}
       onContextMenu={(event) => {
         event.preventDefault();
+        // @ts-ignore
         const _$span = $span;
         if (!_$span) {
           return;

@@ -144,7 +144,7 @@ const Arrow = (
 ) => {
   const { store } = props;
   // const { arrowX, arrowY, baseSide, placedSide, shouldHideArrow } = state;
-  let $arrow: HTMLSpanElement | undefined = undefined;
+  let $arrow: HTMLSpanElement;
 
   const [state, setState] = createSignal(store.state);
 
@@ -153,6 +153,7 @@ const Arrow = (
   });
 
   onMount(() => {
+    // @ts-ignore
     const $$arrow = $arrow;
     if (!$$arrow) {
       return;
@@ -165,6 +166,7 @@ const Arrow = (
 
   return (
     <span
+      // @ts-ignore
       ref={$arrow}
       class={cn("popper__arrow", props.class)}
       style={{

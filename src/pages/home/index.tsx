@@ -333,11 +333,15 @@ function HomeIndexPageCore(props: ViewComponentProps) {
     },
   });
   const state = {
-    get files() {
+    get curTab() {
       const index = $tabs.state.curId;
       if (index === null) {
-        return sizeGroups["general"];
+        return "general";
       }
+      return index;
+    },
+    get files() {
+      const index = this.curTab;
       return sizeGroups[index];
     },
     get file() {
@@ -348,7 +352,7 @@ function HomeIndexPageCore(props: ViewComponentProps) {
         return "";
       }
       const count = countFiles(this.files);
-      return i18next.t("download_zip_with_files_count", { name: `${_file.name2}.zip`, count });
+      return i18next.t("download_zip_with_files_count", { name: `${_file.name2}_${this.curTab}.zip`, count });
     },
     get newuser() {
       return storage.values.newuser;
@@ -509,7 +513,7 @@ function HomeIndexPageCore(props: ViewComponentProps) {
         return;
       }
       const content = await zip.generateAsync({ type: "blob" });
-      saveAs(content, `${_file.name2}.zip`);
+      saveAs(content, `${_file.name2}_${state.curTab}.zip`);
     },
     async ready() {},
     onChange(handler: Handler<TheTypesOfEvents[Events.Change]>) {
@@ -543,7 +547,7 @@ export const HomeIndexPage: ViewComponent = (props) => {
             </div>
           </div>
           <div>
-            <a href="https://github.com/ltaoo/wx_channels_download" target="_blank">
+            <a href="https://github.com/ltaoo/AppIconsHelper" target="_blank">
               <GithubIcon class="w-[36px] h-[36px] text-gray-600 hover:text-gray-800 cursor-pointer" />
             </a>
           </div>
@@ -649,14 +653,14 @@ export const HomeIndexPage: ViewComponent = (props) => {
       <Show when={page().file}>
         <div class="fixed bottom-12 left-1/2 -translate-x-1/2">
           <div
-            class="flex justify-center w-[360px] rounded-md py-4 bg-gray-800 cursor-pointer hover:bg-gray-900"
+            class="flex justify-center w-[360px] mx-auto rounded-md py-4 bg-gray-800 cursor-pointer hover:bg-gray-900"
             onClick={() => {
               $page.downloadFiles(page().files, page().file!);
             }}
           >
             <div class="text-xl text-gray-100">{i18next.t("download")}</div>
           </div>
-          <div class="mt-2 text-center text-gray-800">{page().downloadTip}</div>
+          <div class="mt-2 text-center text-gray-400">{page().downloadTip}</div>
         </div>
       </Show>
     </div>
