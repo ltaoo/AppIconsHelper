@@ -537,13 +537,12 @@ export const HomeIndexPage: ViewComponent = (props) => {
 
   return (
     <div class="bg-[#f8f9fa] min-h-screen">
-      <div class="py-4 shadow-md bg-white">
+      <div class="py-4 shadow-sm bg-white">
         <div class="flex items-center justify-between w-[1080px] mx-auto">
           <div class="flex items-center">
-            <img class="w-[54px] h-[54px]" src="/128x128.png" />
-            <div class="ml-4 text-gray-800">
-              <div class="text-gray-600 text-3xl">AppIconsHelper</div>
-              <div class="text-gray-400 text-lg">{i18next.t("slogan")}</div>
+            <img class="w-[32px] h-[32px]" src="/128x128.png" />
+            <div class="ml-2 text-gray-800 cursor-default">
+              <div class="text-gray-600 text-3xl font-bold italic">AppIconsHelper</div>
             </div>
           </div>
           <div>
@@ -553,7 +552,7 @@ export const HomeIndexPage: ViewComponent = (props) => {
           </div>
         </div>
       </div>
-      <div class="w-[1080px] mx-auto mt-12">
+      <div class="w-[1080px] mx-auto mt-8">
         <div
           class="__a relative w-[120px] h-[120px] mx-auto"
           style={{ "z-index": 100 }}

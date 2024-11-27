@@ -66,9 +66,9 @@ export const TabHeader = (props: { store: TabHeaderCore<any> }) => {
                   }}
                 >
                   <Show when={tab.url}>
-                    <img class="w-[24px] h-[24px] object-contain" src={tab.url} />
+                    <img class="w-[24px] h-[24px] mr-2 object-contain" src={tab.url} />
                   </Show>
-                  <div class="ml-2 text-xl text-gray-600">{tab.text}</div>
+                  <div class="text-xl text-gray-600">{tab.text}</div>
                 </div>
               );
             }}
