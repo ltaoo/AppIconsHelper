@@ -9,7 +9,6 @@ export function loadImage(data: any): Promise<Result<HTMLImageElement>> {
     img.onerror = (msg) => {
       resolve(Result.Err(msg as string));
     };
-    console.log(data);
     img.src = data;
   });
 }

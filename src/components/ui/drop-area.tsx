@@ -3,21 +3,6 @@ import i18next from "i18next";
 
 import { DragZoneCore } from "@/domains/ui/drag-zone";
 
-// export function DropAreaCore() {
-//   let _hovering = false;
-
-//   const state = {
-//     get hovering() {
-//       return _hovering;
-//     },
-//   };
-//   return {
-//     Symbol: "DropAreaCore" as const,
-//     state,
-//   };
-// }
-// export type DropAreaCore = ReturnType<typeof DropAreaCore>;
-
 export function DropArea(props: { store: DragZoneCore } & JSX.HTMLAttributes<HTMLDivElement>) {
   const { store } = props;
 

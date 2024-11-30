@@ -15,10 +15,10 @@ import { base, Handler } from "@/domains/base";
 import { DragZoneCore } from "@/domains/ui/drag-zone";
 import { Result } from "@/domains/result";
 import { DropArea } from "@/components/ui/drop-area";
-import { blobToArrayBuffer, loadImage, readFileAsArrayBuffer, readFileAsURL } from "@/utils/browser";
 import { TabHeader } from "@/components/ui/tab-header";
 import { TabHeaderCore } from "@/domains/ui/tab-header";
 import { GithubIcon } from "@/components/GithubIcon";
+import { blobToArrayBuffer, loadImage, readFileAsArrayBuffer, readFileAsURL } from "@/utils/browser";
 import { extraFilenameWithoutSuffix } from "@/utils";
 
 function HomeIndexPageCore(props: ViewComponentProps) {
